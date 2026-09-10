@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Forca — A sala de aula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F2E4;
+    --paper-dim:#EAE2CC;
+    --ink:#1E3B2C;
+    --ink-dim:#5E6B5C;
+    --board-deep:#0E2018;
+    --gold:#9C6F26;
+    --gold-bright:#C9A24B;
+    --wrong:#B3451F;
+    --right:#3F7A63;
+    --wood:#5C4432;
+    --line:#D8CFB4;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:radial-gradient(ellipse at top left, #FBF7EC 0%, var(--paper) 55%), var(--paper);
+    font-family:'Space Grotesk', sans-serif;
+    color:var(--ink);
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  header{margin-bottom:26px;border-bottom:1px solid var(--line);padding-bottom:20px;
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;}
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(26px,4.2vw,40px);
+    margin:0 0 6px;
+    color:var(--ink);
+  }
+  header p{margin:0;color:var(--ink-dim);font-size:15px;max-width:52ch;line-height:1.5;}
+  .score{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--ink-dim);
+    text-align:right;
+    white-space:nowrap;
+  }
+  .score b{color:var(--gold);}
+
+  .layout{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:36px;
+    align-items:start;
+  }
+  @media (max-width:680px){ .layout{grid-template-columns:1fr;} }
+
+  .board-frame{
+    background:var(--wood);
+    border-radius:6px;
+    padding:14px;
+    box-shadow:0 10px 24px -10px rgba(30,20,10,.35);
+  }
+  .gallows-box{
+    background:var(--board-deep);
+    border-radius:3px;
+    aspect-ratio:1/1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #progress-label{
+    text-align:center;
+    font-size:13px;
+    color:var(--ink-dim);
+    margin-top:10px;
+    letter-spacing:.3px;
+  }
+
+  .play-area{min-width:0;}
+  #word-display{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    justify-content:center;
+    margin:6px 0 26px;
+  }
+  .letter-slot{
+    width:34px;height:44px;
+    border-bottom:3px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:24px;
+    text-transform:uppercase;
+    color:var(--ink);
+  }
+  .letter-slot.filled{border-color:var(--gold);color:var(--gold);}
+
+  #keyboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(38px,1fr));
+    gap:7px;
+    margin-bottom:22px;
+  }
+  .key{
+    padding:10px 0;
+    border-radius:4px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease, opacity .15s ease;
+  }
+  .key:hover:not(:disabled){background:var(--paper-dim);border-color:var(--gold);}
+  .key:disabled{opacity:.4;cursor:default;}
+  .key.correct{background:var(--right);border-color:var(--right);color:var(--paper);}
+  .key.wrong{background:var(--wrong);border-color:var(--wrong);color:var(--paper);opacity:.75;}
+
+  #status{
+    min-height:26px;
+    font-size:15px;
+    margin-bottom:16px;
+  }
+  #status.win{color:var(--right);font-weight:600;}
+  #status.lose{color:var(--wrong);font-weight:600;}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;}
+  button.action-btn{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14px;font-weight:500;
+    padding:10px 16px;border-radius:4px;
+    border:1px solid var(--line);
+    background:transparent;color:var(--ink);
+    cursor:pointer;
+  }
+  button.action-btn:hover{background:var(--paper-dim);border-color:var(--gold);}
+  button.action-btn.primary{background:var(--gold);color:var(--paper);border-color:var(--gold);font-weight:600;}
+  button.action-btn.primary:hover{background:var(--gold-bright);}
+  button.action-btn:disabled{opacity:.35;cursor:default;}
+
+  #hangman-figure.swing{
+    animation:swing 1.6s ease-in-out 2;
+    transform-origin: 100px 34px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    #hangman-figure.swing{animation:none;}
+  }
+  @keyframes swing{
+    0%,100%{transform:rotate(0deg);}
+    25%{transform:rotate(6deg);}
+    75%{transform:rotate(-6deg);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Jogo da forca: a sala de aula</h1>
+      <p>Adivinhe a palavra clicando nas letras antes que o desenho fique completo.</p>
+    </div>
+    <div class="score">Acertos: <b id="score-win">0</b> &nbsp;·&nbsp; Erros: <b id="score-lose">0</b></div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="board-frame">
+        <div class="gallows-box">
+          <svg id="hangman-figure" viewBox="0 0 200 220" width="100%" height="100%">
+            <!-- forca -->
+            <line x1="20" y1="200" x2="120" y2="200" stroke="#CFCABB" stroke-width="4" stroke-linecap="round"/>
+            <line x1="45" y1="200" x2="45" y2="20" stroke="#CFCABB" stroke-width="4" stroke-linecap="round"/>
+            <line x1="45" y1="20" x2="130" y2="20" stroke="#CFCABB" stroke-width="4" stroke-linecap="round"/>
+            <line x1="130" y1="20" x2="130" y2="42" stroke="#CFCABB" stroke-width="4" stroke-linecap="round"/>
+
+            <!-- partes do corpo, ocultas por padrao -->
+            <circle id="part-head" cx="130" cy="58" r="16" stroke="#F3EFE3" stroke-width="4" fill="none" visibility="hidden"/>
+            <line id="part-torso" x1="130" y1="74" x2="130" y2="130" stroke="#F3EFE3" stroke-width="4" stroke-linecap="round" visibility="hidden"/>
+            <line id="part-arm-l" x1="130" y1="90" x2="105" y2="115" stroke="#F3EFE3" stroke-width="4" stroke-linecap="round" visibility="hidden"/>
+            <line id="part-arm-r" x1="130" y1="90" x2="155" y2="115" stroke="#F3EFE3" stroke-width="4" stroke-linecap="round" visibility="hidden"/>
+            <line id="part-leg-l" x1="130" y1="130" x2="108" y2="165" stroke="#F3EFE3" stroke-width="4" stroke-linecap="round" visibility="hidden"/>
+            <line id="part-leg-r" x1="130" y1="130" x2="152" y2="165" stroke="#F3EFE3" stroke-width="4" stroke-linecap="round" visibility="hidden"/>
+            <path id="part-hair" d="M 116 46 Q 130 36 144 46" stroke="#C9A24B" stroke-width="4" fill="none" stroke-linecap="round" visibility="hidden"/>
+          </svg>
+        </div>
+        <div id="progress-label">Palavra 1 de 7</div>
+      </div>
+    </div>
+
+    <div class="play-area">
+      <div id="word-display"></div>
+      <div id="status"></div>
+      <div id="keyboard"></div>
+      <div class="actions">
+        <button class="action-btn primary" id="next-btn" disabled>Próxima palavra</button>
+        <button class="action-btn" id="retry-btn">Tentar esta palavra de novo</button>
+        <button class="action-btn" id="restart-btn">Reiniciar jogo (voltar à palavra 1)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const WORDS = ["APAGADOR","MOCHILA","CADERNO","CANETA","CARTEIRA","CADEIRA","LIVRO"];
+const BODY_PARTS = ["part-head","part-torso","part-arm-l","part-arm-r","part-leg-l","part-leg-r","part-hair"];
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+let order = [];
+let roundIndex = 0;
+let currentWord = "";
+let guessed = new Set();
+let wrongCount = 0;
+let roundOver = false;
+let wins = 0, losses = 0;
+
+const wordDisplay = document.getElementById('word-display');
+const keyboard = document.getElementById('keyboard');
+const statusEl = document.getElementById('status');
+const nextBtn = document.getElementById('next-btn');
+const restartBtn = document.getElementById('restart-btn');
+const retryBtn = document.getElementById('retry-btn');
+const progressLabel = document.getElementById('progress-label');
+const scoreWinEl = document.getElementById('score-win');
+const scoreLoseEl = document.getElementById('score-lose');
+const figure = document.getElementById('hangman-figure');
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function startGame(){
+  // sorteia a ordem das palavras uma vez; "Reiniciar jogo" reaproveita
+  // essa mesma ordem, então sempre volta para a mesma palavra 1.
+  order = shuffle(WORDS);
+  resetToRoundOne();
+}
+
+function resetToRoundOne(){
+  roundIndex = 0;
+  wins = 0; losses = 0;
+  updateScore();
+  startRound();
+}
+
+function retryCurrentRound(){
+  startRound();
+}
+
+function startRound(){
+  currentWord = order[roundIndex];
+  guessed = new Set();
+  wrongCount = 0;
+  roundOver = false;
+  figure.classList.remove('swing');
+  BODY_PARTS.forEach(id => document.getElementById(id).setAttribute('visibility','hidden'));
+  statusEl.textContent = '';
+  statusEl.className = '';
+  nextBtn.disabled = true;
+  retryBtn.disabled = false;
+  progressLabel.textContent = `Palavra ${roundIndex+1} de ${order.length}`;
+  renderWord();
+  renderKeyboard();
+}
+
+function renderWord(){
+  wordDisplay.innerHTML = '';
+  for(const ch of currentWord){
+    const slot = document.createElement('div');
+    slot.className = 'letter-slot' + (guessed.has(ch) ? ' filled' : '');
+    slot.textContent = guessed.has(ch) ? ch : '';
+    wordDisplay.appendChild(slot);
+  }
+}
+
+function renderKeyboard(){
+  keyboard.innerHTML = '';
+  ALPHABET.forEach(letter=>{
+    const btn = document.createElement('button');
+    btn.className = 'key';
+    btn.textContent = letter;
+    btn.addEventListener('click', ()=> guessLetter(letter, btn));
+    keyboard.appendChild(btn);
+  });
+}
+
+function guessLetter(letter, btn){
+  if(roundOver || guessed.has(letter)) return;
+  guessed.add(letter);
+  btn.disabled = true;
+
+  if(currentWord.includes(letter)){
+    btn.classList.add('correct');
+    renderWord();
+    checkWin();
+  } else {
+    btn.classList.add('wrong');
+    revealNextPart();
+    checkLose();
+  }
+}
+
+function revealNextPart(){
+  if(wrongCount < BODY_PARTS.length){
+    document.getElementById(BODY_PARTS[wrongCount]).setAttribute('visibility','visible');
+    wrongCount++;
+  }
+}
+
+function checkWin(){
+  const complete = [...currentWord].every(ch => guessed.has(ch));
+  if(complete){
+    roundOver = true;
+    wins++;
+    updateScore();
+    statusEl.textContent = 'Acertou! Palavra completa.';
+    statusEl.className = 'win';
+    disableKeyboard();
+    nextBtn.disabled = false;
+  }
+}
+
+function checkLose(){
+  if(wrongCount >= BODY_PARTS.length){
+    roundOver = true;
+    losses++;
+    updateScore();
+    statusEl.textContent = `Não foi dessa vez. A palavra era ${currentWord}.`;
+    statusEl.className = 'lose';
+    disableKeyboard();
+    figure.classList.add('swing');
+    revealWholeWord();
+    nextBtn.disabled = false;
+  }
+}
+
+function revealWholeWord(){
+  [...currentWord].forEach(ch => guessed.add(ch));
+  renderWord();
+}
+
+function disableKeyboard(){
+  keyboard.querySelectorAll('.key').forEach(b => b.disabled = true);
+}
+
+function updateScore(){
+  scoreWinEl.textContent = wins;
+  scoreLoseEl.textContent = losses;
+}
+
+nextBtn.addEventListener('click', ()=>{
+  roundIndex++;
+  if(roundIndex >= order.length){
+    finishGame();
+  } else {
+    startRound();
+  }
+});
+
+function finishGame(){
+  wordDisplay.innerHTML = '';
+  keyboard.innerHTML = '';
+  progressLabel.textContent = `${order.length} de ${order.length} palavras jogadas`;
+  statusEl.textContent = `Fim de jogo! Você acertou ${wins} de ${order.length} palavras.`;
+  statusEl.className = wins === order.length ? 'win' : '';
+  nextBtn.disabled = true;
+  retryBtn.disabled = true;
+}
+
+restartBtn.addEventListener('click', resetToRoundOne);
+retryBtn.addEventListener('click', retryCurrentRound);
+
+startGame();
+</script>
+</body>
+</html>
