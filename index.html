@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palavras Cruzadas — Cursos na Universidade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board:#1E3B2C;
+    --board-dark:#16302222;
+    --chalk:#F3EFE3;
+    --chalk-dim:#CFCABB;
+    --gold:#C9A24B;
+    --wrong:#C1502E;
+    --right:#5C9E85;
+    --wood:#5C4432;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at top left, #24462F 0%, var(--board) 55%),
+      var(--board);
+    font-family:'Space Grotesk', sans-serif;
+    color:var(--chalk);
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:980px;margin:0 auto;}
+
+  header{margin-bottom:28px;border-bottom:1px solid #3f5c4c;padding-bottom:22px;}
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(28px,4.4vw,42px);
+    margin:0 0 6px;
+    letter-spacing:.2px;
+  }
+  header p{
+    margin:0;
+    color:var(--chalk-dim);
+    font-size:15px;
+    max-width:60ch;
+    line-height:1.5;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(260px,0.85fr);
+    gap:36px;
+    align-items:start;
+  }
+  @media (max-width:760px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  /* GRID */
+  .board-frame{
+    background:var(--wood);
+    padding:14px;
+    border-radius:6px;
+    box-shadow:0 14px 30px -12px rgba(0,0,0,.5);
+    overflow-x:auto;
+  }
+  #grid{
+    display:grid;
+    gap:2px;
+    background:#0f2018;
+    width:max-content;
+    margin:0 auto;
+  }
+  .cell{
+    width:34px;height:34px;
+    position:relative;
+    background:var(--board);
+  }
+  .cell.block{background:transparent;}
+  .cell.active{background:#274E3B;}
+  .cell input{
+    width:100%;height:100%;
+    border:none;
+    background:transparent;
+    color:var(--chalk);
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:16px;
+    text-transform:uppercase;
+    outline:none;
+    caret-color:var(--gold);
+  }
+  .cell input:focus{background:#31624A;}
+  .cell.correct input{color:var(--right);}
+  .cell.incorrect input{color:var(--wrong);}
+  .cell .num{
+    position:absolute;
+    top:1px;left:3px;
+    font-size:9px;
+    color:var(--gold);
+    font-family:'Space Grotesk',sans-serif;
+    pointer-events:none;
+  }
+
+  /* CLUES */
+  .clues h2{
+    font-family:'Fraunces', serif;
+    font-size:18px;
+    font-weight:600;
+    margin:0 0 10px;
+    color:var(--gold);
+  }
+  .clue-group{margin-bottom:22px;}
+  .clue-group ol{
+    margin:0;
+    padding-left:22px;
+    color:var(--chalk-dim);
+    font-size:14.5px;
+    line-height:1.6;
+  }
+  .clue-group li{margin-bottom:8px;}
+  .clue-group li::marker{color:var(--gold);font-weight:600;}
+  .clue-group li.solved{color:var(--right);text-decoration:line-through;text-decoration-color:#5C9E8577;}
+
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:22px;
+    flex-wrap:wrap;
+  }
+  button{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14px;
+    font-weight:500;
+    padding:10px 16px;
+    border-radius:4px;
+    border:1px solid #3f5c4c;
+    background:transparent;
+    color:var(--chalk);
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  button:hover{background:#274E3B;border-color:var(--gold);}
+  button.primary{background:var(--gold);color:#1E3B2C;border-color:var(--gold);font-weight:600;}
+  button.primary:hover{background:#ddb562;}
+
+  #status{
+    margin-top:14px;
+    font-size:14px;
+    color:var(--chalk-dim);
+    min-height:20px;
+  }
+  #status.win{color:var(--right);font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Palavras cruzadas: cursos na universidade</h1>
+    <p>Leia as dicas e preencha a grade com o nome do curso correspondente. As palavras não usam acentos — escreva só as letras.</p>
+  </header>
+
+  <div class="layout">
+    <div class="board-frame">
+      <div id="grid"></div>
+    </div>
+
+    <div class="clues">
+      <div class="clue-group">
+        <h2>Horizontais →</h2>
+        <ol id="across-list"></ol>
+      </div>
+      <div class="clue-group">
+        <h2>Verticais ↓</h2>
+        <ol id="down-list"></ol>
+      </div>
+      <div class="actions">
+        <button class="primary" id="check-btn">Verificar respostas</button>
+        <button id="reveal-btn">Mostrar respostas</button>
+        <button id="clear-btn">Limpar</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Dados: vocabulário + dicas ----------
+const WORDS = [
+  { word: "MATEMATICA",    clue: "Disciplina que estuda números, equações e cálculos." },
+  { word: "HISTORIA",      clue: "Disciplina que estuda os acontecimentos do passado." },
+  { word: "PSICOLOGIA",    clue: "Curso que estuda a mente e o comportamento humano." },
+  { word: "BIOLOGIA",      clue: "Ciência que estuda os seres vivos." },
+  { word: "GEOGRAFIA",     clue: "Disciplina que estuda o espaço, o território e o meio ambiente." },
+  { word: "CALCULO",       clue: "Disciplina de matemática avançada, muito estudada em Engenharia." },
+  { word: "ADMINISTRACAO", clue: "Curso voltado para a gestão de empresas e negócios." },
+  { word: "SOCIOLOGIA",    clue: "Ciência que estuda a sociedade e as relações sociais." },
+  { word: "ARTES",         clue: "Curso voltado para pintura, escultura, música e outras expressões criativas." }
+];
+
+// ---------- Gerador de palavras cruzadas ----------
+function generateCrossword(words){
+  const list = words.map(w => ({...w})).sort((a,b)=> b.word.length - a.word.length);
+  const grid = {}; // "x,y" -> letter
+  const placed = [];
+
+  function canPlace(word, x, y, dir){
+    const dx = dir === 'H' ? 1 : 0, dy = dir === 'V' ? 1 : 0;
+    let intersects = false;
+    for(let i=0;i<word.length;i++){
+      const cx = x+dx*i, cy = y+dy*i;
+      const key = `${cx},${cy}`;
+      if(grid[key] !== undefined){
+        if(grid[key] !== word[i]) return false;
+        intersects = true;
+      } else {
+        if(dir === 'H'){
+          if(grid[`${cx},${cy-1}`] !== undefined || grid[`${cx},${cy+1}`] !== undefined) return false;
+        } else {
+          if(grid[`${cx-1},${cy}`] !== undefined || grid[`${cx+1},${cy}`] !== undefined) return false;
+        }
+      }
+    }
+    const bx = x-dx, by = y-dy;
+    if(grid[`${bx},${by}`] !== undefined) return false;
+    const ex = x+dx*word.length, ey = y+dy*word.length;
+    if(grid[`${ex},${ey}`] !== undefined) return false;
+    return intersects;
+  }
+
+  function place(word, x, y, dir){
+    const dx = dir === 'H' ? 1 : 0, dy = dir === 'V' ? 1 : 0;
+    for(let i=0;i<word.length;i++) grid[`${x+dx*i},${y+dy*i}`] = word[i];
+  }
+
+  // primeira palavra: horizontal, na origem
+  place(list[0].word, 0, 0, 'H');
+  placed.push({...list[0], x:0, y:0, dir:'H'});
+
+  for(let wi=1; wi<list.length; wi++){
+    const w = list[wi];
+    let best = null;
+    for(const pw of placed){
+      for(let i=0; i<w.word.length && !best; i++){
+        for(let j=0; j<pw.word.length; j++){
+          if(w.word[i] === pw.word[j]){
+            const dir = pw.dir === 'H' ? 'V' : 'H';
+            let x, y;
+            if(pw.dir === 'H'){ x = pw.x+j; y = pw.y-i; }
+            else { x = pw.x-i; y = pw.y+j; }
+            if(canPlace(w.word, x, y, dir)){ best = {x,y,dir}; break; }
+          }
+        }
+      }
+      if(best) break;
+    }
+    if(best){
+      place(w.word, best.x, best.y, best.dir);
+      placed.push({...w, x:best.x, y:best.y, dir:best.dir});
+    } else {
+      // sem interseção possível: coloca isolada abaixo da grade atual
+      let maxY = -Infinity;
+      Object.keys(grid).forEach(k=>{ const y=parseInt(k.split(',')[1]); if(y>maxY) maxY=y; });
+      const y = (maxY === -Infinity ? 0 : maxY) + 2;
+      place(w.word, 0, y, 'H');
+      placed.push({...w, x:0, y:y, dir:'H'});
+    }
+  }
+  return placed;
+}
+
+const placedWords = generateCrossword(WORDS);
+
+// ---------- Normaliza coordenadas e monta a grade ----------
+let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+placedWords.forEach(w=>{
+  const dx = w.dir==='H'?1:0, dy = w.dir==='V'?1:0;
+  const ex = w.x + dx*(w.word.length-1), ey = w.y + dy*(w.word.length-1);
+  minX = Math.min(minX, w.x, ex); maxX = Math.max(maxX, w.x, ex);
+  minY = Math.min(minY, w.y, ey); maxY = Math.max(maxY, w.y, ey);
+});
+const cols = maxX - minX + 1, rows = maxY - minY + 1;
+
+const cellMap = {}; // "x,y" -> {letter, num, cellsBelongTo:[]}
+placedWords.forEach(w=>{
+  const dx = w.dir==='H'?1:0, dy = w.dir==='V'?1:0;
+  for(let i=0;i<w.word.length;i++){
+    const x = w.x - minX + dx*i, y = w.y - minY + dy*i;
+    const key = `${x},${y}`;
+    if(!cellMap[key]) cellMap[key] = { letter: w.word[i], words: [] };
+    cellMap[key].words.push({ wordRef: w, index: i });
+  }
+});
+
+// numeração estilo cruzadinha tradicional
+let counter = 1;
+placedWords.forEach(w=>{ w.startsAt = null; });
+const startCells = [];
+placedWords.forEach(w=>{
+  const dx = w.dir==='H'?1:0, dy = w.dir==='V'?1:0;
+  const x = w.x - minX, y = w.y - minY;
+  startCells.push({x,y,word:w});
+});
+startCells.sort((a,b)=> a.y - b.y || a.x - b.x);
+const numberedCells = {};
+startCells.forEach(sc=>{
+  const key = `${sc.x},${sc.y}`;
+  if(numberedCells[key] === undefined) numberedCells[key] = counter++;
+  sc.word.number = numberedCells[key];
+});
+
+// ---------- Renderiza a grade ----------
+const gridEl = document.getElementById('grid');
+gridEl.style.gridTemplateColumns = `repeat(${cols}, 34px)`;
+gridEl.style.gridTemplateRows = `repeat(${rows}, 34px)`;
+
+const inputRefs = {}; // "x,y" -> input element
+
+for(let y=0;y<rows;y++){
+  for(let x=0;x<cols;x++){
+    const key = `${x},${y}`;
+    const cellDiv = document.createElement('div');
+    if(cellMap[key]){
+      cellDiv.className = 'cell active';
+      if(numberedCells[key] !== undefined){
+        const num = document.createElement('span');
+        num.className = 'num';
+        num.textContent = numberedCells[key];
+        cellDiv.appendChild(num);
+      }
+      const input = document.createElement('input');
+      input.maxLength = 1;
+      input.autocomplete = 'off';
+      input.dataset.x = x; input.dataset.y = y;
+      input.addEventListener('input', (e)=>{
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g,'');
+        if(e.target.value) focusNext(x,y);
+      });
+      input.addEventListener('keydown', (e)=>{
+        if(e.key === 'Backspace' && !e.target.value) focusPrev(x,y);
+        else if(e.key === 'ArrowRight') focusDir(x,y,1,0);
+        else if(e.key === 'ArrowLeft') focusDir(x,y,-1,0);
+        else if(e.key === 'ArrowDown') focusDir(x,y,0,1);
+        else if(e.key === 'ArrowUp') focusDir(x,y,0,-1);
+      });
+      cellDiv.appendChild(input);
+      inputRefs[key] = input;
+    } else {
+      cellDiv.className = 'cell block';
+    }
+    gridEl.appendChild(cellDiv);
+  }
+}
+
+function focusDir(x,y,dx,dy){
+  const el = inputRefs[`${x+dx},${y+dy}`];
+  if(el) el.focus();
+}
+function focusNext(x,y){
+  // tenta direita, depois abaixo
+  if(inputRefs[`${x+1},${y}`]) { inputRefs[`${x+1},${y}`].focus(); return; }
+  if(inputRefs[`${x},${y+1}`]) { inputRefs[`${x},${y+1}`].focus(); }
+}
+function focusPrev(x,y){
+  if(inputRefs[`${x-1},${y}`]) { inputRefs[`${x-1},${y}`].focus(); return; }
+  if(inputRefs[`${x},${y-1}`]) { inputRefs[`${x},${y-1}`].focus(); }
+}
+
+// ---------- Renderiza as dicas ----------
+const acrossList = document.getElementById('across-list');
+const downList = document.getElementById('down-list');
+const acrossWords = placedWords.filter(w=>w.dir==='H').sort((a,b)=>a.number-b.number);
+const downWords = placedWords.filter(w=>w.dir==='V').sort((a,b)=>a.number-b.number);
+
+function renderClueList(listEl, words){
+  words.forEach(w=>{
+    const li = document.createElement('li');
+    li.id = `clue-${w.dir}-${w.number}`;
+    li.textContent = `${w.clue}`;
+    li.dataset.num = w.number;
+    const strong = document.createElement('strong');
+    li.prepend(strong);
+    listEl.appendChild(li);
+  });
+}
+renderClueList(acrossList, acrossWords);
+renderClueList(downList, downWords);
+
+// ---------- Verificação ----------
+const statusEl = document.getElementById('status');
+
+function getWordCells(w){
+  const dx = w.dir==='H'?1:0, dy = w.dir==='V'?1:0;
+  const cells = [];
+  for(let i=0;i<w.word.length;i++){
+    const x = w.x - minX + dx*i, y = w.y - minY + dy*i;
+    cells.push({x,y,letter:w.word[i]});
+  }
+  return cells;
+}
+
+document.getElementById('check-btn').addEventListener('click', ()=>{
+  let filled = 0, correct = 0, total = 0;
+  Object.entries(cellMap).forEach(([key])=>{
+    const [x,y] = key.split(',').map(Number);
+    const input = inputRefs[key];
+    const parentCell = input.parentElement;
+    total++;
+    if(!input.value){ parentCell.classList.remove('correct','incorrect'); return; }
+    filled++;
+    if(input.value === cellMap[key].letter){
+      parentCell.classList.add('correct');
+      parentCell.classList.remove('incorrect');
+      correct++;
+    } else {
+      parentCell.classList.add('incorrect');
+      parentCell.classList.remove('correct');
+    }
+  });
+  [...acrossWords, ...downWords].forEach(w=>{
+    const cells = getWordCells(w);
+    const done = cells.every(c=> inputRefs[`${c.x},${c.y}`].value === c.letter);
+    const li = document.getElementById(`clue-${w.dir}-${w.number}`);
+    if(li) li.classList.toggle('solved', done);
+  });
+  if(correct === total){
+    statusEl.textContent = 'Parabéns! Todas as palavras estão corretas.';
+    statusEl.classList.add('win');
+  } else {
+    statusEl.textContent = `${correct} de ${total} letras corretas até agora.`;
+    statusEl.classList.remove('win');
+  }
+});
+
+document.getElementById('reveal-btn').addEventListener('click', ()=>{
+  Object.entries(cellMap).forEach(([key, data])=>{
+    inputRefs[key].value = data.letter;
+    inputRefs[key].parentElement.classList.remove('incorrect');
+    inputRefs[key].parentElement.classList.add('correct');
+  });
+  [...acrossWords, ...downWords].forEach(w=>{
+    const li = document.getElementById(`clue-${w.dir}-${w.number}`);
+    if(li) li.classList.add('solved');
+  });
+  statusEl.textContent = 'Respostas reveladas.';
+  statusEl.classList.remove('win');
+});
+
+document.getElementById('clear-btn').addEventListener('click', ()=>{
+  Object.values(inputRefs).forEach(input=>{
+    input.value = '';
+    input.parentElement.classList.remove('correct','incorrect');
+  });
+  document.querySelectorAll('.clue-group li').forEach(li=>li.classList.remove('solved'));
+  statusEl.textContent = '';
+  statusEl.classList.remove('win');
+});
+</script>
+</body>
+</html>
