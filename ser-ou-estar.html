@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ser ou Estar?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: one column game board; the sentence card sits above two drop zones, SER (blue, permanent) on the left and ESTAR (coral, changing) on the right */
+:root{
+  --bg:#f1f4f8; --surface:#ffffff; --ink:#1c2433; --muted:#5b6578; --line:#d7dde8;
+  --ser:#1f4fa3; --ser-soft:#e2eaf8; --estar:#c8552a; --estar-soft:#fbe7dc;
+  --good:#2b7f50; --good-soft:#e1f2e8; --bad:#b83838; --bad-soft:#f8e2e2;
+  --on-accent:#ffffff; --shadow:0 1px 2px rgba(28,36,51,.06),0 8px 24px rgba(28,36,51,.08);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121722; --surface:#1b2230; --ink:#e8ecf3; --muted:#9ba5b7; --line:#2d3647;
+  --ser:#86a9ef; --ser-soft:#1e2b46; --estar:#f0915f; --estar-soft:#3a2418;
+  --good:#63c68e; --good-soft:#173324; --bad:#ef7b7b; --bad-soft:#3b1d1d;
+  --on-accent:#10141c; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121722; --surface:#1b2230; --ink:#e8ecf3; --muted:#9ba5b7; --line:#2d3647;
+  --ser:#86a9ef; --ser-soft:#1e2b46; --estar:#f0915f; --estar-soft:#3a2418;
+  --good:#63c68e; --good-soft:#173324; --bad:#ef7b7b; --bad-soft:#3b1d1d;
+  --on-accent:#10141c; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.3); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:flex;flex-direction:column;gap:24px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.card:focus-visible{outline:3px solid var(--ser);outline-offset:3px}
+
+/* Header */
+.head{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2.4rem,8vw,3.6rem);line-height:1;margin:0;letter-spacing:-.02em;text-wrap:balance}
+h1 .s{color:var(--ser)} h1 .e{color:var(--estar)} h1 .ou{color:var(--muted);font-weight:500;font-size:.6em}
+.qs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.q{border-radius:12px;padding:10px 14px;font-size:.92rem;min-width:0}
+.q b{display:block;font-family:var(--display);font-size:1.05rem}
+.q.s{background:var(--ser-soft)} .q.s b{color:var(--ser)}
+.q.e{background:var(--estar-soft)} .q.e b{color:var(--estar)}
+.q span{color:var(--muted)}
+
+/* Start screen */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:560px){.modes{grid-template-columns:1fr}}
+.mode{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;text-align:left;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+.mode:hover{transform:translateY(-2px);border-color:var(--ser)}
+.mode h2{font-family:var(--display);font-size:1.35rem;margin:0}
+.mode p{margin:0;color:var(--muted);font-size:.95rem}
+.mode .ex{font-size:.9rem;background:var(--bg);border-radius:8px;padding:8px 10px;color:var(--ink)}
+.mode .go{margin-top:auto;font-weight:700;color:var(--ser)}
+
+/* Status bar */
+.status{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.dots{display:flex;gap:6px;flex:1;min-width:160px}
+.dot{height:8px;flex:1;border-radius:4px;background:var(--line)}
+.dot.ok{background:var(--good)} .dot.no{background:var(--bad)} .dot.now{background:var(--muted)}
+.stat{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.stat b{color:var(--ink);font-size:1.05rem}
+.link{background:none;border:0;padding:4px 0;color:var(--muted);text-decoration:underline;font-size:.85rem}
+
+/* Card */
+.card{position:relative;z-index:2;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;user-select:none;-webkit-user-select:none;transition:transform .25s ease,border-color .2s}
+.card.grab{cursor:grab;touch-action:none}
+.card.dragging{transition:none;cursor:grabbing;box-shadow:0 20px 40px rgba(0,0,0,.18)}
+.card .n{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sent{font-family:var(--display);font-weight:500;font-size:clamp(1.35rem,4.5vw,1.8rem);line-height:1.3;margin:0;text-wrap:balance}
+.blank{display:inline-block;min-width:3.2em;border-bottom:3px solid var(--muted);text-align:center;color:transparent}
+.fill{font-weight:800;padding:0 .15em;border-radius:6px}
+.fill.s{color:var(--ser);background:var(--ser-soft)} .fill.e{color:var(--estar);background:var(--estar-soft)}
+.en{margin:0;color:var(--muted);font-style:italic}
+.hint{margin:0;font-size:.85rem;color:var(--muted)}
+.card.ok{border-color:var(--good)} .card.no{border-color:var(--bad)}
+
+/* Zones */
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.zone{border:2px dashed var(--line);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:130px;min-width:0;transition:background .15s,border-color .15s}
+.zone.s{border-color:color-mix(in srgb,var(--ser) 45%,transparent)}
+.zone.e{border-color:color-mix(in srgb,var(--estar) 45%,transparent)}
+.zone.s.hot{background:var(--ser-soft);border-style:solid;border-color:var(--ser)}
+.zone.e.hot{background:var(--estar-soft);border-style:solid;border-color:var(--estar)}
+.zbtn{border:0;border-radius:12px;padding:12px 10px;font-family:var(--display);font-weight:800;font-size:1.4rem;letter-spacing:.04em;color:var(--on-accent);display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.zbtn small{font-family:var(--body);font-weight:600;font-size:.75rem;letter-spacing:0;opacity:.9}
+.zone.s .zbtn{background:var(--ser)} .zone.e .zbtn{background:var(--estar)}
+.zbtn:disabled{cursor:default;opacity:.55}
+.placed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.placed li{font-size:.85rem;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;gap:6px;align-items:flex-start;animation:pop .25s ease}
+.placed li i{font-style:normal;font-weight:800;flex:none}
+.placed li.ok i{color:var(--good)} .placed li.no i{color:var(--bad)}
+@keyframes pop{from{transform:scale(.9);opacity:.3}to{transform:none;opacity:1}}
+
+/* Options (complete mode) */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:14px;font-family:var(--display);font-weight:700;font-size:1.3rem}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+
+/* Feedback */
+.fb{border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.fb.ok{background:var(--good-soft)} .fb.no{background:var(--bad-soft)}
+.fb h3{margin:0;font-family:var(--display);font-size:1.25rem}
+.fb.ok h3{color:var(--good)} .fb.no h3{color:var(--bad)}
+.fb p{margin:0}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;margin-right:6px;vertical-align:1px}
+.tag.s{background:var(--ser);color:var(--on-accent)} .tag.e{background:var(--estar);color:var(--on-accent)}
+.fb .qline{font-size:.9rem;color:var(--muted)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.primary{background:var(--ink);color:var(--bg);border:0;border-radius:12px;padding:12px 22px;font-weight:700}
+.secondary{background:transparent;border:2px solid var(--line);border-radius:12px;padding:10px 20px;font-weight:700}
+
+/* End */
+.end{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:26px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.big{font-family:var(--display);font-weight:800;font-size:3.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.big span{font-size:.45em;color:var(--muted);font-weight:500}
+.end h2{margin:0;font-family:var(--display)}
+.review{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.review li{border-left:4px solid var(--line);padding:4px 0 4px 12px}
+.review li.s{border-color:var(--ser)} .review li.e{border-color:var(--estar)}
+.review small{display:block;color:var(--muted)}
+.foot{font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="eyebrow">Português 1101 · Gramática</div>
+    <h1><span class="s">Ser</span> <span class="ou">ou</span> <span class="e">Estar?</span></h1>
+    <div class="qs">
+      <div class="q s"><b>SER</b>Em geral, como é? <span>Typical, normally true</span></div>
+      <div class="q e"><b>ESTAR</b>Como está agora/hoje? <span>State, feeling, change</span></div>
+    </div>
+  </header>
+
+  <!-- Start -->
+  <section id="start" class="modes" aria-label="Escolha o jogo">
+    <button class="mode" id="goSort">
+      <h2>Classifique</h2>
+      <p>Drag each sentence to <b>SER</b> or <b>ESTAR</b>. You can also tap the buttons.</p>
+      <div class="ex">Hoje o Roberto ___ nervoso. → ESTAR</div>
+      <span class="go">Jogar →</span>
+    </button>
+    <button class="mode" id="goFill">
+      <h2>Complete a frase</h2>
+      <p>Choose the right form: sou, é, somos, são, estou, está, estamos, estão.</p>
+      <div class="ex">Nós ___ americanos. → somos</div>
+      <span class="go">Jogar →</span>
+    </button>
+  </section>
+
+  <!-- Play -->
+  <section id="play" hidden>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="status">
+        <div class="dots" id="dots"></div>
+        <div class="stat">Pontos <b id="score">0</b></div>
+        <div class="stat">Sequência <b id="streak">0</b></div>
+        <button class="link" id="quit">Sair</button>
+      </div>
+
+      <div class="card" id="card" tabindex="-1">
+        <div class="n" id="num">Frase 1 de 10</div>
+        <p class="sent" id="sent"></p>
+        <p class="en" id="en" hidden></p>
+        <p class="hint" id="hint"></p>
+      </div>
+
+      <div class="zones" id="zones">
+        <div class="zone s" id="zS">
+          <button class="zbtn" data-v="s">SER<small>em geral</small></button>
+          <ul class="placed" id="lS"></ul>
+        </div>
+        <div class="zone e" id="zE">
+          <button class="zbtn" data-v="e">ESTAR<small>agora / hoje</small></button>
+          <ul class="placed" id="lE"></ul>
+        </div>
+      </div>
+
+      <div class="opts" id="opts" hidden></div>
+
+      <div class="fb" id="fb" hidden aria-live="polite"></div>
+      <div class="row" id="nextRow" hidden><button class="primary" id="next">Próxima →</button></div>
+    </div>
+  </section>
+
+  <!-- End -->
+  <section id="end" class="end" hidden>
+    <div class="big" id="final">0<span>/10</span></div>
+    <h2 id="endMsg"></h2>
+    <div id="revWrap">
+      <p style="margin:0 0 8px;font-weight:700">Revise estas frases:</p>
+      <ul class="review" id="review"></ul>
+    </div>
+    <div class="row">
+      <button class="primary" id="again">Jogar de novo</button>
+      <button class="secondary" id="menu">Outro jogo</button>
+    </div>
+  </section>
+
+  <p class="foot">Each round has 10 sentences picked at random, so every game is a little different.</p>
+</div>
+
+<script>
+(function(){
+const FORMS={s:['sou','é','somos','são'],e:['estou','está','estamos','estão']};
+const PERS=['eu','você / ele / ela','nós','vocês / eles / elas'];
+const R={
+  nat:{l:'Nationality',w:'Where someone is from is part of who they are.'},
+  pers:{l:'Personality',w:'This describes what the person is usually like.'},
+  phys:{l:'Physical description',w:'This is how the person looks in general.'},
+  gen:{l:'General quality',w:'This is what is normally true, in general.'},
+  feel:{l:'Feeling',w:'Emotions are states: how someone feels right now.'},
+  cond:{l:'Condition right now',w:'This is how things are now or today, and it can change.'},
+  res:{l:'Visible result',w:'Something happened, and you can see the result.'}
+};
+// [sentence, English, verb, person index, reason, optional note]
+const RAW=[
+ ['A Camila ___ brasileira. Ela nasceu em São Paulo.','Camila is Brazilian. She was born in São Paulo.','s',1,'nat'],
+ ['Nós ___ americanos, de Ohio.','We are American, from Ohio.','s',2,'nat'],
+ ['O Pierre ___ francês.','Pierre is French.','s',1,'nat'],
+ ['Vocês ___ mexicanos?','Are you (all) Mexican?','s',3,'nat'],
+ ['Eu ___ portuguesa, de Lisboa.','I am Portuguese, from Lisbon.','s',0,'nat'],
+ ['Os pais do Luca ___ italianos.','Luca’s parents are Italian.','s',3,'nat'],
+ ['O Roberto ___ muito calmo. Ele quase nunca fica nervoso.','Roberto is very calm. He almost never gets nervous.','s',1,'pers'],
+ ['Minha mãe ___ simpática e engraçada.','My mom is nice and funny.','s',1,'pers'],
+ ['Os meus colegas ___ muito trabalhadores.','My classmates are very hardworking.','s',3,'pers'],
+ ['Você ___ tímido ou extrovertido?','Are you shy or outgoing?','s',1,'pers'],
+ ['As minhas irmãs ___ inteligentes e criativas.','My sisters are smart and creative.','s',3,'pers'],
+ ['O professor de química ___ exigente.','The chemistry professor is demanding.','s',1,'pers'],
+ ['Vocês ___ muito engraçados!','You (all) are really funny!','s',3,'pers'],
+ ['Eu ___ alta e morena.','I am tall and have dark hair.','s',0,'phys'],
+ ['Em geral, a biblioteca ___ silenciosa.','In general, the library is quiet.','s',1,'gen'],
+ ['Esta maçã ___ verde. Não é uma maçã vermelha.','This apple is green. It is not a red apple.','s',1,'gen','Here verde is the color of the apple, not a condition.'],
+ ['Essa loja ___ aberta 24 horas.','That store is open 24 hours.','s',1,'gen','This is the store’s general policy, not just right now.'],
+ ['A comida brasileira ___ deliciosa.','Brazilian food is delicious.','s',1,'gen'],
+ ['O Rio de Janeiro ___ muito bonito.','Rio de Janeiro is very beautiful.','s',1,'gen'],
+ ['Hoje o Roberto ___ nervoso. Tem prova!','Today Roberto is nervous. There is a test!','e',1,'feel','Roberto is usually calm, but today he is nervous. That is a change.'],
+ ['Eu ___ ansiosa hoje.','I am anxious today.','e',0,'feel'],
+ ['Nós ___ muito contentes com a nota.','We are very happy with the grade.','e',2,'feel'],
+ ['Você ___ triste? O que aconteceu?','Are you sad? What happened?','e',1,'feel'],
+ ['A Bia ___ preocupada com a prova.','Bia is worried about the test.','e',1,'feel'],
+ ['Eles ___ animados para a festa de sábado.','They are excited about Saturday’s party.','e',3,'feel'],
+ ['Eu ___ feliz porque hoje é sexta-feira!','I am happy because today is Friday!','e',0,'feel'],
+ ['Os alunos ___ cansados depois da aula.','The students are tired after class.','e',3,'cond'],
+ ['Agora a sala ___ barulhenta.','Right now the classroom is noisy.','e',1,'cond','The room is usually quiet, but right now it is noisy.'],
+ ['Nossa, a sala ___ quente hoje!','Wow, the classroom is hot today!','e',1,'cond'],
+ ['A banana ainda ___ verde. Não dá para comer.','The banana is still green. You can’t eat it yet.','e',1,'cond','Here verde means not ripe yet. That will change.'],
+ ['Hmm, a sopa ___ muito boa hoje!','Mmm, the soup is really good today!','e',1,'cond','This is how the soup tastes today, not soup in general.'],
+ ['Vocês ___ doentes hoje?','Are you (all) sick today?','e',3,'cond'],
+ ['O meu quarto ___ bagunçado esta semana.','My room is messy this week.','e',1,'cond'],
+ ['O café ___ frio. Vou esquentar.','The coffee is cold. I’m going to heat it up.','e',1,'cond'],
+ ['O Luca ___ ocupado agora.','Luca is busy right now.','e',1,'cond'],
+ ['A porta ___ aberta. Pode entrar!','The door is open. Come in!','e',1,'res'],
+ ['O meu computador ___ quebrado.','My computer is broken.','e',1,'res'],
+ ['A loja ___ fechada agora. Abre às 9h.','The store is closed now. It opens at 9.','e',1,'res','Closed right now. Compare: “A loja é aberta 24 horas” (general policy).']
+];
+const ITEMS=RAW.map(a=>({t:a[0],en:a[1],v:a[2],p:a[3],r:a[4],note:a[5]||''}));
+const $=id=>document.getElementById(id);
+const card=$('card'), zS=$('zS'), zE=$('zE');
+let mode='sort', deck=[], idx=0, score=0, streak=0, answered=false, results=[];
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function makeDeck(){return shuffle(shuffle(ITEMS.filter(i=>i.v==='s')).slice(0,5).concat(shuffle(ITEMS.filter(i=>i.v==='e')).slice(0,5)))}
+const form=it=>FORMS[it.v][it.p];
+const filled=it=>it.t.replace('___','<span class="fill '+it.v+'">'+form(it)+'</span>');
+const blank=it=>it.t.replace('___','<span class="blank">___</span>');
+const V=v=>v==='s'?'SER':'ESTAR';
+
+function show(which){['start','play','end'].forEach(s=>$(s).hidden=s!==which)}
+
+function start(m){
+  mode=m; deck=makeDeck(); idx=0; score=0; streak=0; results=[];
+  $('lS').innerHTML=''; $('lE').innerHTML='';
+  $('zones').hidden=mode!=='sort'; $('opts').hidden=mode!=='fill';
+  show('play'); showItem();
+}
+function dots(){
+  $('dots').innerHTML=deck.map((_,i)=>'<span class="dot '+(i<results.length?(results[i].ok?'ok':'no'):(i===idx?'now':''))+'"></span>').join('');
+  $('score').textContent=score; $('streak').textContent=streak;
+}
+function showItem(){
+  answered=false; const it=deck[idx];
+  card.className='card'+(mode==='sort'?' grab':''); card.style.transform='';
+  $('num').textContent='Frase '+(idx+1)+' de '+deck.length;
+  $('sent').innerHTML=blank(it);
+  $('en').hidden=true;
+  $('hint').textContent=mode==='sort'?'Arraste para SER ou ESTAR (or use ← →)':'Escolha a forma certa';
+  $('hint').hidden=false;
+  $('fb').hidden=true; $('nextRow').hidden=true;
+  document.querySelectorAll('.zbtn').forEach(b=>b.disabled=false);
+  if(mode==='fill'){
+    const o=it.v==='s'?'e':'s', others=[0,1,2,3].filter(p=>p!==it.p), p2=others[Math.floor(Math.random()*3)];
+    const opts=shuffle([FORMS[it.v][it.p],FORMS[o][it.p],FORMS[it.v][p2],FORMS[o][p2]]);
+    $('opts').innerHTML=opts.map(f=>'<button class="opt" data-f="'+f+'">'+f+'</button>').join('');
+  }
+  dots();
+}
+function answer(choice,btn){
+  if(answered) return; answered=true;
+  const it=deck[idx], right=form(it);
+  let ok, picked;
+  if(mode==='sort'){ok=choice===it.v}
+  else{picked=choice; ok=choice===right}
+  if(ok){score++;streak++}else streak=0;
+  results.push({it,ok});
+  card.classList.remove('grab'); card.classList.add(ok?'ok':'no');
+  $('sent').innerHTML=filled(it);
+  $('en').textContent=it.en; $('en').hidden=false; $('hint').hidden=true;
+  document.querySelectorAll('.zbtn').forEach(b=>b.disabled=true);
+  if(mode==='sort'){
+    const li=document.createElement('li'); li.className=ok?'ok':'no';
+    li.innerHTML='<i>'+(ok?'✓':'✗')+'</i><span>'+filled(it)+'</span>';
+    $(it.v==='s'?'lS':'lE').appendChild(li);
+  }else{
+    document.querySelectorAll('.opt').forEach(b=>{b.disabled=true; if(b.dataset.f===right) b.classList.add('right'); else if(b.dataset.f===picked) b.classList.add('wrong');});
+  }
+  const r=R[it.r];
+  let extra='';
+  if(!ok && mode==='fill'){
+    const pv=FORMS.s.includes(picked)?'s':'e', pp=FORMS[pv].indexOf(picked);
+    if(pv===it.v) extra='<p>Right verb! But the subject goes with <b>'+PERS[it.p]+'</b>, so use <b>'+right+'</b>.</p>';
+    else if(pp===it.p) extra='<p>Right person, wrong verb. <b>'+picked+'</b> is '+V(pv)+'; here we need '+V(it.v)+'.</p>';
+  }
+  const fb=$('fb'); fb.className='fb '+(ok?'ok':'no');
+  fb.innerHTML='<h3>'+(ok?['Certo!','Muito bem!','Isso aí!','Perfeito!'][Math.floor(Math.random()*4)]:'Quase!')+'</h3>'+
+    '<p><span class="tag '+it.v+'">'+V(it.v)+'</span>The answer is <b>'+right+'</b>. '+r.l+': '+r.w+'</p>'+
+    (it.note?'<p>'+it.note+'</p>':'')+extra+
+    '<p class="qline">'+(it.v==='s'?'Em geral, como é? → ser':'Como está agora/hoje? → estar')+'</p>';
+  fb.hidden=false; $('nextRow').hidden=false;
+  $('next').textContent=idx+1<deck.length?'Próxima →':'Ver resultado →';
+  dots(); $('next').focus({preventScroll:true});
+}
+function next(){ idx++; if(idx>=deck.length) end(); else {showItem(); card.scrollIntoView({block:'nearest',behavior:'smooth'})} }
+function end(){
+  show('end');
+  $('final').innerHTML=score+'<span>/'+deck.length+'</span>';
+  $('endMsg').textContent=score===deck.length?'Perfeito! Você é craque em ser e estar.':score>=7?'Muito bem! Você está quase lá.':'Bom começo! Vamos praticar mais um pouco?';
+  const miss=results.filter(x=>!x.ok);
+  $('revWrap').hidden=!miss.length;
+  $('review').innerHTML=miss.map(x=>'<li class="'+x.it.v+'">'+filled(x.it)+'<small>'+V(x.it.v)+' · '+R[x.it.r].l+'</small></li>').join('');
+}
+
+// Drag
+let drag=null;
+function hit(x,y){for(const [k,el] of [['s',zS],['e',zE]]){const r=el.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom) return k} return null}
+function hot(k){zS.classList.toggle('hot',k==='s'); zE.classList.toggle('hot',k==='e')}
+card.addEventListener('pointerdown',e=>{ if(mode!=='sort'||answered) return; drag={x:e.clientX,y:e.clientY}; try{card.setPointerCapture(e.pointerId)}catch(_){} card.classList.add('dragging'); });
+card.addEventListener('pointermove',e=>{ if(!drag) return; const dx=e.clientX-drag.x, dy=e.clientY-drag.y; card.style.transform='translate('+dx+'px,'+dy+'px) rotate('+(dx/25)+'deg)'; hot(hit(e.clientX,e.clientY)); });
+function up(e){ if(!drag) return; drag=null; card.classList.remove('dragging'); card.style.transform=''; const k=e.type==='pointerup'?hit(e.clientX,e.clientY):null; hot(null); if(k) answer(k); }
+card.addEventListener('pointerup',up); card.addEventListener('pointercancel',up);
+
+document.querySelectorAll('.zbtn').forEach(b=>b.addEventListener('click',()=>answer(b.dataset.v)));
+$('opts').addEventListener('click',e=>{const b=e.target.closest('.opt'); if(b) answer(b.dataset.f,b)});
+document.addEventListener('keydown',e=>{
+  if($('play').hidden) return;
+  if(!answered && mode==='sort'){ if(e.key==='ArrowLeft'){e.preventDefault();answer('s')} else if(e.key==='ArrowRight'){e.preventDefault();answer('e')} }
+});
+$('next').addEventListener('click',next);
+$('goSort').addEventListener('click',()=>start('sort'));
+$('goFill').addEventListener('click',()=>start('fill'));
+$('again').addEventListener('click',()=>start(mode));
+$('menu').addEventListener('click',()=>show('start'));
+$('quit').addEventListener('click',()=>show('start'));
+})();
+</script>
+
+</body>
+</html>
